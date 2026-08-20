@@ -8,7 +8,19 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.nfciraqireader.example"
+      "bundleIdentifier": "com.fullship.nfciraqireader.example",
+      "entitlements": {
+        "com.apple.developer.nfc.readersession.formats": [
+          "TAG"
+        ]
+      },
+      "infoPlist": {
+        "NFCReaderUsageDescription": "لقراءة بيانات البطاقة الوطنية عبر NFC",
+        "com.apple.developer.nfc.readersession.iso7816.select-identifiers": [
+          "A0000002471001"
+        ]
+      },
+      "appleTeamId": "28WN5DTH9W"
     },
     "android": {
       "adaptiveIcon": {
