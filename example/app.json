@@ -6,31 +6,17 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      ["expo-nfc-iraqi-reader", { "nfcPermission": "لقراءة بيانات البطاقة الوطنية عبر NFC" }]
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fullship.nfciraqireader.example",
-      "entitlements": {
-        "com.apple.developer.nfc.readersession.formats": [
-          "TAG"
-        ]
-      },
-      "infoPlist": {
-        "NFCReaderUsageDescription": "لقراءة بيانات البطاقة الوطنية عبر NFC",
-        "com.apple.developer.nfc.readersession.iso7816.select-identifiers": [
-          "A0000002471001"
-        ]
-      },
       "appleTeamId": "28WN5DTH9W"
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false,
-      "package": "expo.modules.nfciraqireader.example"
+      "package": "expo.modules.nfciraqireader.example",
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
