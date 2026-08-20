@@ -1,17 +1,9 @@
 {
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "DOM.Iterable",
-      "esnext"
-    ],
-    "types": [
-      "jest"
-    ],
-    "typeRoots": [
-      "./ts-declarations",
-      "./node_modules/@types"
-    ],
+    "noEmit": false,
+    "lib": ["dom", "DOM.Iterable", "esnext"],
+    "types": ["jest"],
+    "typeRoots": ["./ts-declarations", "./node_modules/@types"],
     "jsx": "react-native",
     "target": "esnext",
     "moduleResolution": "bundler",
@@ -32,12 +24,7 @@
     "rootDir": "./src",
     "outDir": "./build"
   },
-  "include": [
-    "./src"
-  ],
-  "exclude": [
-    "**/__mocks__/*",
-    "**/__tests__/*"
-  ],
+  "include": ["./src"],
+  "exclude": ["**/__mocks__/*", "**/__tests__/*"],
   "extends": "expo/tsconfig.base"
 }
