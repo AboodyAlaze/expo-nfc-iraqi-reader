@@ -56,37 +56,72 @@ public class ExpoNfcIraqiReaderModule: Module {
       return AVCaptureDevice.authorizationStatus(for: .video) == .authorized
     }
 
-    /// يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة
-    AsyncFunction("scanMrz") { (promise: Promise) in
-      guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-        promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة")
-        return
-      }
+    /// يطلب صلاحية الكاميرا من المستخدم
+    AsyncFunction("requestCameraPermission") { (promise: Promise) in
+      let status = AVCaptureDevice.authorizationStatus(for: .video)
 
-      DispatchQueue.main.async {
-        guard let presenter = self.appContext?.utilities?.currentViewController() else {
-          promise.reject("NO_ACTIVITY", "ما لكيت الواجهة")
-          return
+      switch status {
+      case .authorized:
+        promise.resolve(true)
+      case .denied, .restricted:
+        promise.resolve(false)
+      case .notDetermined:
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+          promise.resolve(granted)
         }
-
-        let vc = MrzScannerViewController(
-          hint: "وجّه الكاميرا على الأسطر السفلية بظهر البطاقة"
-        ) { keys in
-          guard let keys = keys else {
-            promise.reject("MRZ_CANCELLED", "تم إلغاء المسح")
-            return
-          }
-          promise.resolve([
-            "documentNumber": keys.documentNumber,
-            "dateOfBirth": keys.dateOfBirth,
-            "dateOfExpiry": keys.dateOfExpiry,
-          ])
-        }
-
-        vc.modalPresentationStyle = .fullScreen
-        presenter.present(vc, animated: true)
+      @unknown default:
+        promise.resolve(false)
       }
     }
+
+    /// يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة
+    AsyncFunction("scanMrz") { (promise: Promise) in
+      let status = AVCaptureDevice.authorizationStatus(for: .video)
+
+      switch status {
+      case .authorized:
+        DispatchQueue.main.async { self.presentScanner(promise) }
+
+      case .notDetermined:
+        // نطلب الإذن أول، وإذا وافق نفتح الماسح
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+          if granted {
+            DispatchQueue.main.async { self.presentScanner(promise) }
+          } else {
+            promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة")
+          }
+        }
+
+      default:
+        promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة")
+      }
+    }
+  }
+
+  // MARK: - عرض شاشة المسح
+
+  private func presentScanner(_ promise: Promise) {
+    guard let presenter = self.appContext?.utilities?.currentViewController() else {
+      promise.reject("NO_ACTIVITY", "ما لكيت الواجهة")
+      return
+    }
+
+    let vc = MrzScannerViewController(
+      hint: "وجّه الكاميرا على الأسطر السفلية بظهر البطاقة"
+    ) { keys in
+      guard let keys = keys else {
+        promise.reject("MRZ_CANCELLED", "تم إلغاء المسح")
+        return
+      }
+      promise.resolve([
+        "documentNumber": keys.documentNumber,
+        "dateOfBirth": keys.dateOfBirth,
+        "dateOfExpiry": keys.dateOfExpiry,
+      ])
+    }
+
+    vc.modalPresentationStyle = .fullScreen
+    presenter.present(vc, animated: true)
   }
 }
 
