@@ -263,10 +263,16 @@ extension CardScanner {
       "surname": d.surname,
       "givenNames": d.givenNames,
       "nationality": d.nationality,
-      "dateOfBirth": d.dateOfBirth,
       "sex": d.sex,
-      "dateOfExpiry": d.dateOfExpiry,
       "rawMrz": d.rawMrz,
+
+      // التواريخ منسّقة DD/MM/YYYY مع النسخة الخام YYMMDD
+      "dateOfBirth": TextCodec.formatDate(d.dateOfBirth),
+      "dateOfBirthRaw": d.dateOfBirth,
+      "dateOfExpiry": TextCodec.formatDate(d.dateOfExpiry),
+      "dateOfExpiryRaw": d.dateOfExpiry,
+      "dateOfIssue": TextCodec.formatDate(d.dateOfIssue),
+      "dateOfIssueRaw": d.dateOfIssue,
 
       "fullNameArabic": d.fullNameArabic,
       "surnameArabic": d.surnameArabic,
@@ -276,7 +282,6 @@ extension CardScanner {
       "personalNumber": d.personalNumber,
 
       "issuingAuthority": d.issuingAuthority,
-      "dateOfIssue": d.dateOfIssue,
 
       "faceFormat": d.faceNote,
       "availableDataGroups": d.availableDataGroups,

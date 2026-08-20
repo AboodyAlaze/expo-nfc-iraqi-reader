@@ -97,6 +97,20 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
             ) == PackageManager.PERMISSION_GRANTED
         }
 
+        /** يرجع حالة الإذن — الطلب الفعلي يصير داخل شاشة المسح */
+        AsyncFunction("requestCameraPermission") { promise: Promise ->
+            val act = activity
+            if (act == null) {
+                promise.resolve(false)
+                return@AsyncFunction
+            }
+            promise.resolve(
+                ContextCompat.checkSelfPermission(
+                    act, Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
+            )
+        }
+
         /** يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة */
         AsyncFunction("scanMrz") { promise: Promise ->
             val act = activity
@@ -105,15 +119,7 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
                 return@AsyncFunction
             }
 
-            val granted = ContextCompat.checkSelfPermission(
-                act, Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!granted) {
-                promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة", null)
-                return@AsyncFunction
-            }
-
+            // الشاشة تطلب الإذن بنفسها إذا مو ممنوح
             mrzPromise = promise
             val intent = Intent(act, MrzScannerActivity::class.java)
             act.startActivityForResult(intent, MRZ_REQUEST_CODE)
@@ -126,7 +132,12 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
 
             val data = payload.data
             if (payload.resultCode != Activity.RESULT_OK || data == null) {
-                promise.reject("MRZ_CANCELLED", "تم إلغاء المسح", null)
+                val reason = data?.getStringExtra(MrzScannerActivity.EXTRA_ERROR)
+                if (reason == "CAMERA_DENIED") {
+                    promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة", null)
+                } else {
+                    promise.reject("MRZ_CANCELLED", "تم إلغاء المسح", null)
+                }
                 return@OnActivityResult
             }
 
@@ -222,9 +233,11 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
         "surname" to d.surname,
         "givenNames" to d.givenNames,
         "nationality" to d.nationality,
-        "dateOfBirth" to d.dateOfBirth,
+          "dateOfBirth" to TextCodec.formatDate(d.dateOfBirth),
+        "dateOfBirthRaw" to d.dateOfBirth,
         "sex" to d.sex,
-        "dateOfExpiry" to d.dateOfExpiry,
+          "dateOfExpiry" to TextCodec.formatDate(d.dateOfExpiry),
+        "dateOfExpiryRaw" to d.dateOfExpiry,
         "rawMrz" to d.rawMrz,
 
         "fullNameArabic" to d.fullNameArabic,
@@ -235,7 +248,7 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
         "personalNumber" to d.personalNumber,
 
         "issuingAuthority" to d.issuingAuthority,
-        "dateOfIssue" to d.dateOfIssue,
+      "dateOfIssue" to TextCodec.formatDate(d.dateOfIssue),
 
         "faceImageBase64" to d.faceImage?.let {
             Base64.encodeToString(it, Base64.NO_WRAP)

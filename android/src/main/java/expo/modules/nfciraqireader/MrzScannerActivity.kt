@@ -1,13 +1,16 @@
 package expo.modules.nfciraqireader
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -29,17 +32,33 @@ class MrzScannerActivity : androidx.activity.ComponentActivity() {
         const val EXTRA_DOB = "dateOfBirth"
         const val EXTRA_EXP = "dateOfExpiry"
         const val EXTRA_HINT = "hint"
+        const val EXTRA_ERROR = "error"
     }
 
     private val executor = Executors.newSingleThreadExecutor()
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private var done = false
+    private lateinit var previewView: PreviewView
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            startCamera()
+        } else {
+            setResult(Activity.RESULT_CANCELED, Intent().apply {
+                putExtra(EXTRA_ERROR, "CAMERA_DENIED")
+            })
+            finish()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val root = FrameLayout(this)
-        val previewView = PreviewView(this).apply {
+
+        previewView = PreviewView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -64,10 +83,19 @@ class MrzScannerActivity : androidx.activity.ComponentActivity() {
         root.addView(hint)
 
         setContentView(root)
-        startCamera(previewView)
+
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            startCamera()
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
 
-    private fun startCamera(previewView: PreviewView) {
+    private fun startCamera() {
         val future = ProcessCameraProvider.getInstance(this)
         future.addListener({
             val provider = future.get()
