@@ -88,4 +88,4 @@ const withNfcIraqiReader: ConfigPlugin<Options> = (config, opts = {}) => {
   return config;
 };
 
-export default createRunOncePlugin(withNfcIraqiReader, 'expo-nfc-iraqi-reader', '0.1.0');
+export default createRunOncePlugin(withNfcIraqiReader, 'expo-nfc-iraqi-reader', '0.2.0');
