@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-nfc-iraqi-reader": ["../src/index"],
+      "expo-nfc-iraqi-reader/*": ["../src/*"]
+    }
+  }
+}
