@@ -1,5 +1,7 @@
 import ExpoModulesCore
 @preconcurrency import CoreNFC
+import AVFoundation
+import UIKit
 
 public class ExpoNfcIraqiReaderModule: Module {
 
@@ -9,6 +11,8 @@ public class ExpoNfcIraqiReaderModule: Module {
     Name("ExpoNfcIraqiReader")
 
     Events("onScanProgress")
+
+    // ---------- NFC ----------
 
     Function("isAvailable") { () -> Bool in
       return NFCTagReaderSession.readingAvailable
@@ -44,6 +48,44 @@ public class ExpoNfcIraqiReaderModule: Module {
     Function("cancel") {
       self.reader?.cancel()
       self.reader = nil
+    }
+
+    // ---------- الكاميرا ----------
+
+    Function("hasCameraPermission") { () -> Bool in
+      return AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+    }
+
+    /// يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة
+    AsyncFunction("scanMrz") { (promise: Promise) in
+      guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+        promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة")
+        return
+      }
+
+      DispatchQueue.main.async {
+        guard let presenter = self.appContext?.utilities?.currentViewController() else {
+          promise.reject("NO_ACTIVITY", "ما لكيت الواجهة")
+          return
+        }
+
+        let vc = MrzScannerViewController(
+          hint: "وجّه الكاميرا على الأسطر السفلية بظهر البطاقة"
+        ) { keys in
+          guard let keys = keys else {
+            promise.reject("MRZ_CANCELLED", "تم إلغاء المسح")
+            return
+          }
+          promise.resolve([
+            "documentNumber": keys.documentNumber,
+            "dateOfBirth": keys.dateOfBirth,
+            "dateOfExpiry": keys.dateOfExpiry,
+          ])
+        }
+
+        vc.modalPresentationStyle = .fullScreen
+        presenter.present(vc, animated: true)
+      }
     }
   }
 }
