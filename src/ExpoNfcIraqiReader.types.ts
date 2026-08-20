@@ -7,6 +7,13 @@ export type ScanOptions = {
   dateOfExpiry: string;
 };
 
+/** المفاتيح الثلاثة المقروءة من الـ MRZ بالكاميرا */
+export type MrzKeys = {
+  documentNumber: string;
+  dateOfBirth: string;
+  dateOfExpiry: string;
+};
+
 export type IdData = {
   // من DG1 (الـ MRZ)
   documentNumber: string;

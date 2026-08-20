@@ -10,30 +10,38 @@ import {
 const EMRTD_AID = 'A0000002471001';
 
 type Options = {
-  /** نص الإذن اللي يظهر للمستخدم على iOS */
+  /** نص إذن NFC اللي يظهر للمستخدم على iOS */
   nfcPermission?: string;
+  /** نص إذن الكاميرا اللي يظهر للمستخدم على iOS */
+  cameraPermission?: string;
   /** معرّفات تطبيقات إضافية مسموح الاتصال بيها */
   selectIdentifiers?: string[];
 };
 
-/** أندرويد: صلاحية NFC */
+/** أندرويد: صلاحيات NFC والكاميرا */
 const withNfcAndroid: ConfigPlugin = (config) =>
   withAndroidManifest(config, (cfg) => {
     const manifest = cfg.modResults;
 
     AndroidConfig.Permissions.ensurePermission(manifest, 'android.permission.NFC');
+    AndroidConfig.Permissions.ensurePermission(manifest, 'android.permission.CAMERA');
 
     manifest.manifest['uses-feature'] = manifest.manifest['uses-feature'] ?? [];
     const features = manifest.manifest['uses-feature'] as any[];
-    const exists = features.some((f) => f?.$?.['android:name'] === 'android.hardware.nfc');
-    if (!exists) {
-      features.push({
-        $: {
-          'android:name': 'android.hardware.nfc',
-          'android:required': 'false',
-        },
-      });
-    }
+
+    const addFeature = (name: string) => {
+      if (!features.some((f) => f?.$?.['android:name'] === name)) {
+        features.push({
+          $: {
+            'android:name': name,
+            'android:required': 'false',
+          },
+        });
+      }
+    };
+
+    addFeature('android.hardware.nfc');
+    addFeature('android.hardware.camera');
 
     return cfg;
   });
@@ -48,13 +56,18 @@ const withNfcEntitlements: ConfigPlugin = (config) =>
     return cfg;
   });
 
-/** iOS: الوصف والـ AID المسموح */
+/** iOS: الأوصاف والـ AID المسموح */
 const withNfcInfoPlist: ConfigPlugin<Options> = (config, opts = {}) =>
   withInfoPlist(config, (cfg) => {
     cfg.modResults.NFCReaderUsageDescription =
       opts.nfcPermission ??
       cfg.modResults.NFCReaderUsageDescription ??
       'This app reads your national ID card over NFC.';
+
+    cfg.modResults.NSCameraUsageDescription =
+      opts.cameraPermission ??
+      cfg.modResults.NSCameraUsageDescription ??
+      'Used to scan the MRZ on the back of your ID card.';
 
     const key = 'com.apple.developer.nfc.readersession.iso7816.select-identifiers';
     const current = (cfg.modResults[key] as string[]) ?? [];

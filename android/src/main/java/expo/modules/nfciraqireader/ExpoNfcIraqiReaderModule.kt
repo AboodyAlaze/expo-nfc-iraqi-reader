@@ -1,11 +1,15 @@
 package expo.modules.nfciraqireader
 
+import android.Manifest
 import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
 import android.os.Bundle
 import android.util.Base64
+import androidx.core.content.ContextCompat
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -21,9 +25,14 @@ class ScanOptions : Record {
 
 class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
 
+    companion object {
+        private const val MRZ_REQUEST_CODE = 8801
+    }
+
     private var pendingPromise: Promise? = null
     private var options: ScanOptions? = null
     private var adapter: NfcAdapter? = null
+    private var mrzPromise: Promise? = null
 
     private val activity: Activity?
         get() = appContext.activityProvider?.currentActivity
@@ -32,6 +41,8 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
         Name("ExpoNfcIraqiReader")
 
         Events("onScanProgress")
+
+        // ---------- NFC ----------
 
         Function("isAvailable") {
             val act = activity ?: return@Function false
@@ -75,6 +86,57 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
             pendingPromise?.reject("CANCELLED", "تم الإلغاء", null)
             pendingPromise = null
             options = null
+        }
+
+        // ---------- الكاميرا ----------
+
+        Function("hasCameraPermission") {
+            val act = activity ?: return@Function false
+            ContextCompat.checkSelfPermission(
+                act, Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        /** يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة */
+        AsyncFunction("scanMrz") { promise: Promise ->
+            val act = activity
+            if (act == null) {
+                promise.reject("NO_ACTIVITY", "ما لكيت الواجهة", null)
+                return@AsyncFunction
+            }
+
+            val granted = ContextCompat.checkSelfPermission(
+                act, Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!granted) {
+                promise.reject("CAMERA_DENIED", "صلاحية الكاميرا مرفوضة", null)
+                return@AsyncFunction
+            }
+
+            mrzPromise = promise
+            val intent = Intent(act, MrzScannerActivity::class.java)
+            act.startActivityForResult(intent, MRZ_REQUEST_CODE)
+        }
+
+        OnActivityResult { _, payload ->
+            if (payload.requestCode != MRZ_REQUEST_CODE) return@OnActivityResult
+            val promise = mrzPromise ?: return@OnActivityResult
+            mrzPromise = null
+
+            val data = payload.data
+            if (payload.resultCode != Activity.RESULT_OK || data == null) {
+                promise.reject("MRZ_CANCELLED", "تم إلغاء المسح", null)
+                return@OnActivityResult
+            }
+
+            promise.resolve(
+                mapOf(
+                    "documentNumber" to data.getStringExtra(MrzScannerActivity.EXTRA_DOC),
+                    "dateOfBirth" to data.getStringExtra(MrzScannerActivity.EXTRA_DOB),
+                    "dateOfExpiry" to data.getStringExtra(MrzScannerActivity.EXTRA_EXP)
+                )
+            )
         }
 
         OnDestroy { stopReader() }

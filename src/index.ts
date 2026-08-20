@@ -1,7 +1,13 @@
 import ExpoNfcIraqiReaderModule from './ExpoNfcIraqiReaderModule';
-import type { IdData, ScanOptions, ScanProgressEvent, ScanStage } from './ExpoNfcIraqiReader.types';
+import type {
+  IdData,
+  MrzKeys,
+  ScanOptions,
+  ScanProgressEvent,
+  ScanStage,
+} from './ExpoNfcIraqiReader.types';
 
-export type { IdData, ScanOptions, ScanProgressEvent, ScanStage };
+export type { IdData, MrzKeys, ScanOptions, ScanProgressEvent, ScanStage };
 
 /** الاشتراك اللي ترجعه دوال الاستماع — استدعِ remove() لإلغائه */
 export type Subscription = { remove: () => void };
@@ -11,12 +17,28 @@ export function isAvailable(): boolean {
   return ExpoNfcIraqiReaderModule.isAvailable();
 }
 
+/** هل صلاحية الكاميرا ممنوحة؟ */
+export function hasCameraPermission(): boolean {
+  return ExpoNfcIraqiReaderModule.hasCameraPermission();
+}
+
 /**
  * يبدأ جلسة القراءة ويرجع بيانات البطاقة.
  * القيم الثلاث تُقرأ من الـ MRZ المطبوع على ظهر البطاقة.
  */
 export async function scan(options: ScanOptions): Promise<IdData> {
   return ExpoNfcIraqiReaderModule.scan(options);
+}
+
+/** يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة */
+export async function scanMrz(): Promise<MrzKeys> {
+  return ExpoNfcIraqiReaderModule.scanMrz();
+}
+
+/** يمسح الـ MRZ بالكاميرا ثم يقرأ الشريحة مباشرة */
+export async function scanFull(): Promise<IdData> {
+  const keys = await ExpoNfcIraqiReaderModule.scanMrz();
+  return ExpoNfcIraqiReaderModule.scan(keys);
 }
 
 /** إلغاء الجلسة الجارية */
@@ -31,7 +53,10 @@ export function addProgressListener(listener: (event: ScanProgressEvent) => void
 
 export default {
   isAvailable,
+  hasCameraPermission,
   scan,
+  scanMrz,
+  scanFull,
   cancel,
   addProgressListener,
 };

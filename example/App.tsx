@@ -1,3 +1,4 @@
+import { useCameraPermissions } from 'expo-camera';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,15 +19,38 @@ export default function App() {
   const [dateOfExpiry, setDateOfExpiry] = useState('');
 
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState('املأ الحقول واضغط قراءة');
+  const [status, setStatus] = useState('امسح الـ MRZ أو املأ الحقول يدوياً');
   const [data, setData] = useState<IdData | null>(null);
+
+  const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
     const sub = NfcReader.addProgressListener((e) => setStatus(e.message));
     return () => sub.remove();
   }, []);
 
-  const handleScan = async () => {
+  const handleScanMrz = async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        setStatus('صلاحية الكاميرا مرفوضة');
+        return;
+      }
+    }
+
+    setStatus('وجّه الكاميرا على أسطر الـ MRZ');
+    try {
+      const keys = await NfcReader.scanMrz();
+      setDocumentNumber(keys.documentNumber);
+      setDateOfBirth(keys.dateOfBirth);
+      setDateOfExpiry(keys.dateOfExpiry);
+      setStatus('تم قراءة الـ MRZ ✔ — هسه قرّب البطاقة للـ NFC');
+    } catch (e: any) {
+      setStatus(`فشل المسح: ${e?.message ?? e}`);
+    }
+  };
+
+  const handleScanNfc = async () => {
     setBusy(true);
     setData(null);
     setStatus('قرّب البطاقة من ظهر الجهاز');
@@ -45,11 +69,44 @@ export default function App() {
     }
   };
 
+  const handleScanFull = async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        setStatus('صلاحية الكاميرا مرفوضة');
+        return;
+      }
+    }
+
+    setBusy(true);
+    setData(null);
+    try {
+      setStatus('وجّه الكاميرا على أسطر الـ MRZ');
+      const result = await NfcReader.scanFull();
+      setData(result);
+      setStatus('تمت القراءة بنجاح ✔');
+    } catch (e: any) {
+      setStatus(`فشل: ${e?.message ?? e}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const ready = documentNumber.length > 0 && dateOfBirth.length === 6 && dateOfExpiry.length === 6;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>قارئ البطاقة الوطنية</Text>
+
+      <View style={styles.button}>
+        <Button title="📷 مسح + قراءة (تلقائي)" onPress={handleScanFull} disabled={busy} />
+      </View>
+
+      <View style={styles.button}>
+        <Button title="📷 مسح الـ MRZ فقط" onPress={handleScanMrz} disabled={busy} />
+      </View>
+
+      <Text style={styles.divider}>— أو أدخلها يدوياً —</Text>
 
       <Field
         label="رقم الوثيقة من الـ MRZ"
@@ -72,7 +129,7 @@ export default function App() {
       />
 
       <View style={styles.button}>
-        <Button title="ابدأ القراءة" onPress={handleScan} disabled={busy || !ready} />
+        <Button title="قراءة NFC" onPress={handleScanNfc} disabled={busy || !ready} />
       </View>
 
       {busy && <ActivityIndicator style={{ marginVertical: 12 }} />}
@@ -155,7 +212,13 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 16,
   },
-  button: { marginTop: 8 },
+  button: { marginTop: 8, marginBottom: 4 },
+  divider: {
+    textAlign: 'center',
+    color: '#999',
+    marginVertical: 16,
+    fontSize: 13,
+  },
   status: { marginTop: 12, textAlign: 'right', color: '#333' },
   results: { marginTop: 20 },
   photo: {
