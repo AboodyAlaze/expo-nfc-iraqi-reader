@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import UIKit
 import Vision
 
@@ -9,11 +10,13 @@ final class MrzScannerViewController: UIViewController {
   private let queue = DispatchQueue(label: "mrz.scanner.queue")
   private var previewLayer: AVCaptureVideoPreviewLayer?
   private var finished = false
+  private let ciContext = CIContext()
 
-  private let onResult: (MrzKeys?) -> Void
+  /// (المفاتيح، مسار صورة الإطار) — nil إذا انلغى المسح
+  private let onResult: (MrzKeys?, String?) -> Void
   private let hintText: String
 
-  init(hint: String, onResult: @escaping (MrzKeys?) -> Void) {
+  init(hint: String, onResult: @escaping (MrzKeys?, String?) -> Void) {
     self.hintText = hint
     self.onResult = onResult
     super.init(nibName: nil, bundle: nil)
@@ -55,7 +58,7 @@ final class MrzScannerViewController: UIViewController {
     guard let device = AVCaptureDevice.default(for: .video),
           let input = try? AVCaptureDeviceInput(device: device),
           session.canAddInput(input) else {
-      finish(nil)
+      finish(nil, nil)
       return
     }
     session.addInput(input)
@@ -64,7 +67,7 @@ final class MrzScannerViewController: UIViewController {
     output.alwaysDiscardsLateVideoFrames = true
     output.setSampleBufferDelegate(self, queue: queue)
     guard session.canAddOutput(output) else {
-      finish(nil)
+      finish(nil, nil)
       return
     }
     session.addOutput(output)
@@ -110,17 +113,34 @@ final class MrzScannerViewController: UIViewController {
   }
 
   @objc private func cancelTapped() {
-    finish(nil)
+    finish(nil, nil)
   }
 
-  private func finish(_ keys: MrzKeys?) {
+  private func finish(_ keys: MrzKeys?, _ imageUri: String?) {
     guard !finished else { return }
     finished = true
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       self.dismiss(animated: true) {
-        self.onResult(keys)
+        self.onResult(keys, imageUri)
       }
+    }
+  }
+
+  /// يحفظ الإطار كـ JPEG بالمجلد المؤقت ويرجع مساره (file://...) أو nil إذا فشل
+  fileprivate func saveFrame(_ buffer: CVPixelBuffer) -> String? {
+    let ci = CIImage(cvPixelBuffer: buffer)
+    guard let cg = ciContext.createCGImage(ci, from: ci.extent) else { return nil }
+    let image = UIImage(cgImage: cg, scale: 1, orientation: .right)
+    guard let data = image.jpegData(compressionQuality: 0.9) else { return nil }
+
+    let name = "id_back_\(Int(Date().timeIntervalSince1970 * 1000)).jpg"
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+    do {
+      try data.write(to: url)
+      return url.absoluteString
+    } catch {
+      return nil
     }
   }
 }
@@ -144,7 +164,8 @@ extension MrzScannerViewController: AVCaptureVideoDataOutputSampleBufferDelegate
         .joined(separator: "\n")
 
       if let keys = MrzParser.extract(text) {
-        self.finish(keys)
+        // الـ buffer صالح داخل هذا الـ callback بس، فنحفظ الصورة هنا
+        self.finish(keys, self.saveFrame(buffer))
       }
     }
 

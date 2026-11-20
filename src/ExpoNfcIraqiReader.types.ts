@@ -14,6 +14,14 @@ export type MrzKeys = {
   dateOfExpiry: string;
 };
 
+/**
+ * نتيجة scanMrz: المفاتيح + مسار صورة ظهر البطاقة (نفس الإطار اللي انقرأ منه الـ MRZ).
+ * imageUri = null إذا فشل حفظ الصورة.
+ */
+export type MrzScanResult = MrzKeys & {
+  imageUri: string | null;
+};
+
 export type IdData = {
   // من DG1 (الـ MRZ)
   documentNumber: string;

@@ -107,8 +107,8 @@ public class ExpoNfcIraqiReaderModule: Module {
     }
 
     let vc = MrzScannerViewController(
-      hint: "وجّه الكاميرا على الأسطر السفلية بظهر البطاقة"
-    ) { keys in
+      hint: "ضع ظهر البطاقة كامل داخل الإطار وثبّت الكاميرا"
+    ) { keys, imageUri in
       guard let keys = keys else {
         promise.reject("MRZ_CANCELLED", "تم إلغاء المسح")
         return
@@ -117,6 +117,8 @@ public class ExpoNfcIraqiReaderModule: Module {
         "documentNumber": keys.documentNumber,
         "dateOfBirth": keys.dateOfBirth,
         "dateOfExpiry": keys.dateOfExpiry,
+        // نفس إطار القراءة محفوظ كصورة (صورة ظهر البطاقة)
+        "imageUri": imageUri ?? NSNull(),
       ])
     }
 

@@ -111,7 +111,7 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
             )
         }
 
-        /** يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة */
+        /** يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة، ويرجع نفس الإطار كصورة (imageUri) */
         AsyncFunction("scanMrz") { promise: Promise ->
             val act = activity
             if (act == null) {
@@ -145,7 +145,9 @@ class ExpoNfcIraqiReaderModule : Module(), NfcAdapter.ReaderCallback {
                 mapOf(
                     "documentNumber" to data.getStringExtra(MrzScannerActivity.EXTRA_DOC),
                     "dateOfBirth" to data.getStringExtra(MrzScannerActivity.EXTRA_DOB),
-                    "dateOfExpiry" to data.getStringExtra(MrzScannerActivity.EXTRA_EXP)
+                    "dateOfExpiry" to data.getStringExtra(MrzScannerActivity.EXTRA_EXP),
+                    // نفس إطار القراءة محفوظ كصورة (صورة ظهر البطاقة)
+                    "imageUri" to data.getStringExtra(MrzScannerActivity.EXTRA_IMAGE)
                 )
             )
         }

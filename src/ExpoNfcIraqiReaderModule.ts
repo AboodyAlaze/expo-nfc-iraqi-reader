@@ -3,7 +3,7 @@ import { NativeModule, requireNativeModule } from 'expo';
 import type {
   ExpoNfcIraqiReaderModuleEvents,
   IdData,
-  MrzKeys,
+  MrzScanResult,
   ScanOptions,
 } from './ExpoNfcIraqiReader.types';
 
@@ -11,7 +11,7 @@ declare class ExpoNfcIraqiReaderModule extends NativeModule<ExpoNfcIraqiReaderMo
   isAvailable(): boolean;
   hasCameraPermission(): boolean;
   scan(options: ScanOptions): Promise<IdData>;
-  scanMrz(): Promise<MrzKeys>;
+  scanMrz(): Promise<MrzScanResult>;
   cancel(): void;
 }
 
