@@ -2,12 +2,13 @@ import ExpoNfcIraqiReaderModule from './ExpoNfcIraqiReaderModule';
 import type {
   IdData,
   MrzKeys,
+  MrzScanResult,
   ScanOptions,
   ScanProgressEvent,
   ScanStage,
 } from './ExpoNfcIraqiReader.types';
 
-export type { IdData, MrzKeys, ScanOptions, ScanProgressEvent, ScanStage };
+export type { IdData, MrzKeys, MrzScanResult, ScanOptions, ScanProgressEvent, ScanStage };
 
 /** الاشتراك اللي ترجعه دوال الاستماع — استدعِ remove() لإلغائه */
 export type Subscription = { remove: () => void };
@@ -30,15 +31,19 @@ export async function scan(options: ScanOptions): Promise<IdData> {
   return ExpoNfcIraqiReaderModule.scan(options);
 }
 
-/** يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة */
-export async function scanMrz(): Promise<MrzKeys> {
+/**
+ * يفتح الكاميرا ويقرأ الـ MRZ من ظهر البطاقة.
+ * يرجع المفاتيح + imageUri: نفس الإطار اللي انقرأ منه، محفوظ كصورة JPEG (صورة الخلف).
+ */
+export async function scanMrz(): Promise<MrzScanResult> {
   return ExpoNfcIraqiReaderModule.scanMrz();
 }
 
 /** يمسح الـ MRZ بالكاميرا ثم يقرأ الشريحة مباشرة */
 export async function scanFull(): Promise<IdData> {
-  const keys = await ExpoNfcIraqiReaderModule.scanMrz();
-  return ExpoNfcIraqiReaderModule.scan(keys);
+  const { documentNumber, dateOfBirth, dateOfExpiry } =
+    await ExpoNfcIraqiReaderModule.scanMrz();
+  return ExpoNfcIraqiReaderModule.scan({ documentNumber, dateOfBirth, dateOfExpiry });
 }
 
 /** إلغاء الجلسة الجارية */

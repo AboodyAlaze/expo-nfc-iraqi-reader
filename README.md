@@ -368,7 +368,7 @@ if (!granted) {
 | `isAvailable()` | `boolean` | NFC supported and enabled |
 | `hasCameraPermission()` | `boolean` | Does not prompt |
 | `requestCameraPermission()` | `Promise<boolean>` | Prompts |
-| `scanMrz()` | `Promise<MrzKeys>` | Opens the camera |
+| `scanMrz()` | `Promise<MrzScanResult>` | Opens the camera. Returns the MRZ keys plus `imageUri`, the same camera frame saved as a JPEG (a photo of the back of the card) |
 | `scan(keys)` | `Promise<IdData>` | Reads the chip |
 | `scanFull()` | `Promise<IdData>` | Camera, then chip |
 | `cancel()` | `void` | Cancels the NFC session |
@@ -392,6 +392,19 @@ if (!granted) {
   dateOfExpiry: string;    // YYMMDD
 }
 ```
+
+### `MrzScanResult`
+
+```ts
+{
+  documentNumber: string;
+  dateOfBirth: string;
+  dateOfExpiry: string;
+  imageUri: string | null;  // file:// path of the frame the MRZ was read from
+}
+```
+
+`MrzScanResult` extends `MrzKeys`, so it can be passed straight to `scan()`.
 
 ### `IdData`
 
